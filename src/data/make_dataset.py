@@ -42,6 +42,8 @@ def main(input_filepath, output_filepath):
 
     df_clean.to_csv(output_filepath)
 
+    logger.info(f"processed data saved to {output_filepath}")
+
 
 if __name__ == '__main__':
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -54,4 +56,4 @@ if __name__ == '__main__':
     # load up the .env entries as environment variables
     load_dotenv(find_dotenv())
 
-    main(input_filepath, output_filepath)
+    main()
