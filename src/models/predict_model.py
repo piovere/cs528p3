@@ -36,3 +36,10 @@ def f1(tp, fn, fp):
     tpr = true_positive_rate(tp, fn)
     
     return 2 * ppv * tpr / (ppv + tpr)
+
+
+def confusion(tn, tp, fn, fp):
+    return np.array([
+        [tn, fp],
+        [fn, tp]
+    ])
