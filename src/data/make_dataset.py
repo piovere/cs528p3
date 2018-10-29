@@ -3,6 +3,8 @@ import click
 import logging
 from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
+import pandas as pd
+from os.path import join
 
 
 @click.command()
@@ -14,6 +16,31 @@ def main(input_filepath, output_filepath):
     """
     logger = logging.getLogger(__name__)
     logger.info('making final data set from raw data')
+
+    #project_root = join("..", "..")
+    #raw_data_dir = join(project_root, "data", "raw")
+    #raw_data_file = join(raw_data_dir, "breast-cancer-wisconsin.data")
+
+    column_names = [
+        "Sample",
+        "Clump Thickness",
+        "Cell Size Uniformity",
+        "Cell Shape Uniformity",
+        "Marginal Adhesion",
+        "Single Epithelial Cell Size",
+        "Bare Nuclei",
+        "Bland Chromatin", 
+        "Normal Nuclei",
+        "Mitoses",
+        "Class",
+    ]
+
+    df = pd.read_csv(input_filepath, names=column_names, index_col=0, 
+                     na_values=["?"])
+    
+    df_clean = df.dropna()
+
+    df_clean.to_csv(output_filepath)
 
 
 if __name__ == '__main__':
