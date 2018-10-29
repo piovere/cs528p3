@@ -27,7 +27,7 @@ requirements: test_environment
 
 ## Make Dataset
 data: requirements
-	$(PYTHON_INTERPRETER) src/data/make_dataset.py
+	$(PYTHON_INTERPRETER) src/data/make_dataset.py data/raw/breast-cancer-wisconsin.data data/processed/bc.csv
 
 ## Delete all compiled Python files
 clean:
