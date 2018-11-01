@@ -5,6 +5,7 @@ from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
 import pandas as pd
 from os.path import join
+import numpy as np
 
 
 @click.command()
@@ -40,6 +41,10 @@ def main(input_filepath, output_filepath):
     
     df_clean = df.dropna()
 
+    # Convert the column "Bare Nuclei" to an int
+    df_clean['Bare Nuclei'] = df_clean['Bare Nuclei'].astype(np.int64)
+
+    # Save the file as a csv
     df_clean.to_csv(output_filepath)
 
     logger.info(f"processed data saved to {output_filepath}")
