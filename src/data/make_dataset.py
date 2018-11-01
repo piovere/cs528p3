@@ -4,7 +4,8 @@ import logging
 from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
 import pandas as pd
-from os.path import join
+from os.path import join, exists
+import os
 import numpy as np
 
 
@@ -43,6 +44,12 @@ def main(input_filepath, output_filepath):
 
     # Convert the column "Bare Nuclei" to an int
     df_clean['Bare Nuclei'] = df_clean['Bare Nuclei'].astype(np.int64)
+
+    # Verify path exists
+    path = join("data", "processed")
+    if not(exists(path)):
+        # Try to create path
+        os.makedirs(path)
 
     # Save the file as a csv
     df_clean.to_csv(output_filepath)
