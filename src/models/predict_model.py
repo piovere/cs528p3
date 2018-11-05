@@ -57,6 +57,17 @@ class DecisionTreeClassifier():
             'misclassification': self.misclassification
         }
         self.impurity = impurity_functions[impurity]
+        self.attribute_ = None
+        self.value_ = None
+        self.min_impurity = min_impurity
+        self.depth = depth
+        self.max_depth = max_depth
+        self.left_ = None
+        self.right_ = None
+        self.is_leaf_ = False
+        self.label_ = None
+        self.confidence_ = None
+        self.training_impurity_ = None
     
     def entropy(self, y):
         """Entropy of a class
@@ -124,34 +135,41 @@ class DecisionTreeClassifier():
             p = np.sum(y) / y.shape[0]
         return 1 - np.max([p, 1-p])
     
-    def fit(self, x, y):
-        """Train the data
-        """
-        # While all 
-        raise NotImplementedError
-
+    def fit(self, data):
+        column_names = data.columns
+        x = data[column_names[:-1]]
+        y = data[column_names[-1]]
+        # Calculate impurity
+        impurity = self.impurity(y)
+        self.training_impurity_ = impurity
+        # Decide if I should split
+        if impurity > self.min_impurity and self.depth < self.max_depth:
+            # Calculate the split
+            self.attribute_, self.value_ = split_attribute(x, y, impurity=self.impurity)
+            self.left_ = Node(impurity=self.impurity, min_impurity=self.min_impurity,
+                              depth=self.depth+1, max_depth=self.max_depth)
+            self.right_ = Node(impurity=self.impurity, min_impurity=self.min_impurity,
+                               depth=self.depth+1, max_depth=self.max_depth)
+            left_data = data[data[self.attribute_] <= self.value_]
+            right_data = data[data[self.attribute_] > self.value_]
+            self.left_.fit(left_data)
+            self.right_.fit(right_data)
+        else:
+            self.is_leaf_ = True
+            self.label_ = mode(y)
+            self.confidence_ = self.impurity(y)
+    
     def predict(self, x):
-        raise NotImplementedError
-
-    def split_attribute(self, x, y):
-        min_entropy = np.finfo(np.float64).max # 1e308 on test system
-
-        xt = x.copy()
-        xt['Labels'] = y
-        split_column = None
-        split_value = None
-        for c in x.columns:
-            for v in x[c].unique():
-                left_split = xt[xt[c] <= v]
-                right_split = xt[xt[c] > v]
-                left_impurity = self.impurity(left_split['Labels'])
-                right_impurity = self.impurity(right_split['Labels'])
-                e = left_impurity + right_impurity
-                if e < min_entropy:
-                    min_entropy = e
-                    split_column = c
-                    split_value = v
-        return split_column, split_value
+        if self.is_leaf_:
+            return self.label_.mode
+        else:
+            # Determine left or right
+            if x[self.attribute_] <= self.value_:
+                a = self.left_.predict(x)
+                return a
+            else:
+                a = self.right_.predict(x)
+                return a
 
     @np.vectorize
     def true_negative(self, pred, true):
@@ -238,3 +256,22 @@ class DecisionTreeClassifier():
         tpr = self.true_positive_rate(pred, true)
         
         return 2 * ppv * tpr / (ppv + tpr)
+    
+    def html_print(self):
+        s = "<table border=1 style=\"text-align:center\"><tr style=\"text-align:center\">"
+        if self.is_leaf_:
+            s += "<td style=\"text-align:center\" bgcolor=\"green\">"
+            s += self.__repr__()
+            s += "</td>"
+        else:
+            s += "<td colspan=2 style=\"text-align:center\">"
+            s += self.__repr__()
+            s += "</td>"
+            s += "</tr><tr>"
+            s += "<td style=\"text-align:center\" width=50%>"
+            s += self.left_.html_print()
+            s += "</td><td style=\"text-align:center\" width=50%>"
+            s += self.right_.html_print()
+            s += "</td>"
+        s += "</tr></table>"
+        return s
