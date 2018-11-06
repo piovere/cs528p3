@@ -18,6 +18,7 @@ class KNN():
         self.scaler_.fit(x)
         self.xs_ = self.scaler_.transform(x)
         self.y_ = y
+        return self
 
     def predict(self, x):
         # verify training has happened
@@ -37,12 +38,55 @@ class KNN():
 
         # match those indices to column predictions
         l = mode(self.y_[inds], axis=1)
-        labels = l.mode[:, 0, :]
+
+        labels = l.mode[:,0]
 
         return labels
+    
+    def correct(self, x, y):
+        yp = self.predict(x).ravel()
+        correct = np.argwhere(yp == y)
+        return correct.shape[0]
+    
+    def confusion(self, x, y):
+        yp = self.predict(x)
 
-class DecisionTreeClassifier():
-    def __init__(self, impurity='entropy', max_leaves=10, min_impurity=0.1):
+        tn = np.count_nonzero(np.where((y==2) & (yp==2)))
+        fn = np.count_nonzero(np.where((y==4) & (yp==2)))
+        fp = np.count_nonzero(np.where((y==2) & (yp==4)))
+        tp = np.count_nonzero(np.where((y==4) & (yp==4)))
+
+        r = np.array([
+            [tn, fp],
+            [fn, tp]
+        ])
+
+        return r
+    
+    def accuracy(self, x, y):
+        r = self.confusion(x, y)
+        return (r[0, 0] + r[1, 1]) / np.sum(r)
+    
+    def tpr(self, x, y):
+        r = self.confusion(x, y)
+        return r[1, 1] / (r[1, 1] + r[1, 0])
+    
+    def ppv(self, x, y):
+        r = self.confusion(x, y)
+        return r[1, 1] / (r[1, 1] + r[0, 1])
+    
+    def tnr(self, x, y):
+        r = self.confusion(x, y)
+        return r[0, 0] / (r[0, 0] + r[0, 1])
+    
+    def f1_score(self, x, y):
+        num = 2 * self.ppv(x, y) * self.tpr(x, y)
+        den = self.ppv(x, y) + self.tpr(x, y)
+        return num / den
+
+class Node():
+    def __init__(self, impurity='entropy', min_impurity=0.1,
+                 depth=0, max_depth=10):
         """Classifier with decision trees
 
         Implemented here with `pandas.DataFrame`s
@@ -56,6 +100,7 @@ class DecisionTreeClassifier():
             'gini': self.gini,
             'misclassification': self.misclassification
         }
+        self.i_name = impurity
         self.impurity = impurity_functions[impurity]
         self.attribute_ = None
         self.value_ = None
@@ -91,8 +136,18 @@ class DecisionTreeClassifier():
             p = 0.0
         else:
             p = np.sum(y) / y.shape[0]
-        fp = -p * np.log(p) / np.log(2)
-        sp = (1 - p) * np.log(1 - p) / np.log(2)
+
+        if p == 0.0:
+            fp = 0.0
+        else:
+            fp = -p * np.log(p) / np.log(2)
+
+        if p == 1.0:
+            sp = 0.0
+        elif p > 1.0:
+            raise Exception(f"p > 1.0: {p}")
+        else:
+            sp = (1 - p) * np.log(1 - p) / np.log(2)
         return fp - sp
     
     def gini(self, y):
@@ -145,10 +200,10 @@ class DecisionTreeClassifier():
         # Decide if I should split
         if impurity > self.min_impurity and self.depth < self.max_depth:
             # Calculate the split
-            self.attribute_, self.value_ = split_attribute(x, y, impurity=self.impurity)
-            self.left_ = Node(impurity=self.impurity, min_impurity=self.min_impurity,
+            self.attribute_, self.value_ = self.split_attribute(x, y, impurity=self.impurity)
+            self.left_ = Node(impurity=self.i_name, min_impurity=self.min_impurity,
                               depth=self.depth+1, max_depth=self.max_depth)
-            self.right_ = Node(impurity=self.impurity, min_impurity=self.min_impurity,
+            self.right_ = Node(impurity=self.i_name, min_impurity=self.min_impurity,
                                depth=self.depth+1, max_depth=self.max_depth)
             left_data = data[data[self.attribute_] <= self.value_]
             right_data = data[data[self.attribute_] > self.value_]
@@ -170,6 +225,25 @@ class DecisionTreeClassifier():
             else:
                 a = self.right_.predict(x)
                 return a
+
+    def split_attribute(self, x, y, impurity):
+        min_entropy = np.finfo(np.float64).max # 1e308 on test system
+        xt = x.copy()
+        xt['Labels'] = y
+        split_column = None
+        split_value = None
+        for c in x.columns:
+            for v in x[c].unique():
+                left_split = xt[xt[c] <= v]
+                right_split = xt[xt[c] > v]
+                left_impurity = impurity(left_split['Labels'])
+                right_impurity = impurity(right_split['Labels'])
+                e = left_impurity + right_impurity
+                if e < min_entropy:
+                    min_entropy = e
+                    split_column = c
+                    split_value = v + 0.5
+        return split_column, split_value
 
     @np.vectorize
     def true_negative(self, pred, true):
