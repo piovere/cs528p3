@@ -26,13 +26,16 @@ class DecisionTree():
         y = data[data.columns[-1]]
 
         imp = self.impurity(y)
-        print(imp)
+        print(f"Impurity {imp:0.2f} at depth {self.depth}")
 
-        if self.depth >= self.max_depth or imp < self.min_impurity:
+        if self.depth >= self.max_depth:
             self.is_leaf_ = True
             print("I Found a leaf")
             m = mode(y, axis=None).mode
             self.class_ = m
+        elif imp < self.min_impurity:
+            self.is_leaf_ = True
+            print("Branch is sufficiently pure")
         else:
             # make two branches
             self.left_ = DecisionTree(impurity=self.impurity, 
